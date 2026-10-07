@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { STORY, START_NODE } from './story.js';
+import { STORY, START_NODE, prepareVisit } from './story.js';
 
 // ---------- Settings: tweak while testing ----------
 const CONFIG = {
   typeSpeed: 38,         // characters per second (fallback when there's no voice)
   hintAfterSec: 8,       // show the hint if the visitor doesn't react
-  voiceOn: true,         // the NPC speaks its lines out loud
+  voiceOn: false,        // voice is opt-in so the installation does not talk constantly
   voiceRate: 1.0,
   voicePitch: 0.95,
   absentWhisperSec: 10,  // NPC notices the visitor left
@@ -130,6 +130,7 @@ scene.add(wall);
 // A bright, colorful Caribbean street (Curaçao / Peten feel): low houses
 // painted in vivid colors, lined up behind the promenade
 const city = new THREE.Group();
+const collapsibleBuildings = [];
 const BUILD_COLORS = [0xef5f8a, 0x2b8fd6, 0x3fb0d6, 0x59b85c, 0xf2c53a,
   0xf28f3a, 0xc453c4, 0x6aa8e0, 0xe8b54a, 0xd65f8a];
 const winMat = new THREE.MeshBasicMaterial({ color: 0xeaf6ff });
@@ -144,11 +145,14 @@ for (let i = 0; i < 20; i++) {
   body.position.set(x, h / 2, z);
   body.castShadow = true;
   city.add(body);
+  const building = { body, roof: null, home: body.position.clone(), velocity: 0, falling: false };
+  collapsibleBuildings.push(building);
   // a little roof band in a complementary tone
   const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.1, 0.25, d + 0.1),
     mat(0xf6f1e6, 0.7));
   roof.position.set(x, h + 0.12, z);
   city.add(roof);
+  building.roof = roof;
   // white-framed windows
   const wins = 2 + Math.floor(Math.random() * 4);
   for (let j = 0; j < wins; j++) {
@@ -487,10 +491,106 @@ const REACT_COLORS = {
   GAVE_MARACAS: new THREE.Color(0xe86a2b),
   GAVE_AREPA: new THREE.Color(0xd9a34a),
   GAVE_BOOK: new THREE.Color(0x7c3b2b),
+  RIOT_START: new THREE.Color(0xc4302b),
+  BUILDING_COLLAPSE: new THREE.Color(0xf2b632),
+  DOCKS_FIRE: new THREE.Color(0xff6b25),
 };
 const black = new THREE.Color(0x000000);
 let reactColor = black, reactTimer = 0;
 function react(type) { reactColor = REACT_COLORS[type] ?? black; reactTimer = 1.2; }
+
+const riotLight = new THREE.PointLight(0xc4302b, 0, 18);
+riotLight.position.set(0, 4, -8);
+scene.add(riotLight);
+let sceneEvent = '-';
+let sceneEventTimer = 0;
+let shakeTimer = 0;
+let musicTimer = 0;
+let musicMode = 'none';
+let collapsedCount = 0;
+
+function startMusic(mode) {
+  musicMode = mode;
+  musicTimer = 0;
+}
+
+function collapseBuildings(count) {
+  const candidates = collapsibleBuildings.filter((building) => !building.falling);
+  shuffleForScene(candidates).slice(0, count).forEach((building) => {
+    building.falling = true;
+    building.velocity = 0;
+  });
+}
+
+function updateCollapsedBuildings(dt) {
+  for (const building of collapsibleBuildings) {
+    if (!building.falling) continue;
+    building.velocity += 7 * dt;
+    building.body.position.y = Math.max(0.2, building.body.position.y - building.velocity * dt);
+    building.body.rotation.z += dt * 1.8;
+    if (building.roof) {
+      building.roof.position.y = Math.max(0.3, building.roof.position.y - building.velocity * dt);
+      building.roof.rotation.z += dt * 1.8;
+    }
+  }
+}
+
+function updateMusic(dt) {
+  if (musicMode === 'none') return;
+  musicTimer -= dt;
+  if (musicTimer > 0) return;
+  const patterns = {
+    riot: [110, 146, 174, 130],
+    fight: [180, 220, 180, 260],
+    fire: [90, 120, 90, 160],
+    train: [220, 277, 330, 440],
+  };
+  const notes = patterns[musicMode] || patterns.fight;
+  const step = Math.floor(Math.random() * notes.length);
+  tone(notes[step], musicMode === 'riot' ? 0.18 : 0.28, musicMode === 'fire' ? 0.08 : 0.055);
+  musicTimer = musicMode === 'riot' ? 0.28 : 0.48;
+}
+
+function shuffleForScene(items) {
+  const result = items.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function triggerSceneEvent(type) {
+  sceneEvent = type;
+  sceneEventTimer = type === 'RIOT_START' ? 12 : 3;
+  react(type);
+  if (type === 'RIOT_START') {
+    startMusic('riot');
+    shakeTimer = 2.5;
+    riotLight.intensity = 8;
+    collapseBuildings(1);
+  } else if (type === 'BUILDING_COLLAPSE' || type === 'DOCKS_COLLAPSE') {
+    shakeTimer = 1.8;
+    collapseBuildings(type === 'DOCKS_COLLAPSE' ? 2 : 1);
+    tone(70, 1.2, 0.25);
+  } else if (type === 'DOCKS_FIRE' || type === 'DOCKS_EXPLOSION') {
+    startMusic('fire');
+    riotLight.color.set(0xff6b25);
+    riotLight.intensity = 7;
+    shakeTimer = type === 'DOCKS_EXPLOSION' ? 2 : 0.8;
+    tone(110, 0.8, 0.2);
+  } else if (type === 'FIGHT_START') {
+    startMusic('fight');
+    shakeTimer = 0.5;
+    tone(140, 0.25, 0.18);
+  } else if (type === 'FIGHT_WIN' || type === 'FIGHT_LOSS') {
+    shakeTimer = 1.2;
+    tone(type === 'FIGHT_WIN' ? 520 : 90, 0.45, 0.2);
+  } else if (type === 'TRAIN_DEPART') {
+    startMusic('train');
+    tone(220, 1.5, 0.16);
+  }
+}
 
 // ---------- Game state ----------
 const state = {
@@ -508,7 +608,12 @@ const state = {
   voiceNoBound: false,// the engine never sent boundary events; fall back to own clock
   voiceStartAt: 0,
   speakTok: 0,
+  _finalChoice: null,
 };
+
+function nodeText(node) {
+  return typeof node.text === 'function' ? node.text(state) : node.text;
+}
 
 function goTo(id) {
   const node = STORY[id];
@@ -518,13 +623,14 @@ function goTo(id) {
   state.nodeTime = 0;
   el.hint.classList.remove('show');
   el.hint.textContent = node.hint ?? '';
+  if (node.sceneEvent) triggerSceneEvent(node.sceneEvent);
   if (node.tag) state.path.push(node.tag);
   if (node.end) {
     el.pathLine.textContent = state.path.join('  ') || '·';
     el.pathBox.classList.add('show');
     chime();
   }
-  speak(node.text);
+  speak(nodeText(node));
 }
 
 function startStory() {
@@ -532,8 +638,8 @@ function startStory() {
   state.path = [];
   state.absentFor = 0;
   state.whispered = false;
-  delete state._plan;   // re-shuffle the questions
-  delete state._open;   // re-pick the opening line
+  prepareVisit(state);
+  state._finalChoice = null;
   el.idle.classList.add('hidden');
   goTo(START_NODE);
 }
@@ -610,7 +716,7 @@ function setVoice(on) {
     el.sound.innerHTML = on ? '&#128266; voice: on' : '&#128263; voice: off';
   }
   if (!on) stopSpeaking();
-  else if (state.mode === 'story') speak(STORY[state.nodeId].text); // pick up where we left off
+  else if (state.mode === 'story') speak(nodeText(STORY[state.nodeId])); // pick up where we left off
 }
 if (el.sound) el.sound.addEventListener('click', () => setVoice(!CONFIG.voiceOn));
 
@@ -642,7 +748,14 @@ function chime() { // soft two-note resolution for the ending
 //         SURRENDER, FIGHT, GAVE_CUATRO, GAVE_MARACAS, GAVE_AREPA, GAVE_BOOK
 // The camera will later report which object it sees; each maps to a GAVE_* event.
 const OBJECT_EVENTS = ['GAVE_CUATRO', 'GAVE_MARACAS', 'GAVE_AREPA', 'GAVE_BOOK'];
-const ACTIONS = ['SURRENDER', 'FIGHT', ...OBJECT_EVENTS];
+const ACTIONS = [
+  'SURRENDER', 'FIGHT', ...OBJECT_EVENTS,
+  'GO_MARKET', 'GO_DOCKS', 'GO_BARRIO', 'GO_STATION',
+  'CHASE', 'HELP', 'BREAK', 'CLIMB', 'RESCUE', 'CUT_LOOSE', 'STEAL',
+  'SAVE', 'LETTERS', 'ORGANIZE', 'EXPOSE', 'RIOT', 'RETURN', 'KEEP',
+  'OPEN', 'ENTER', 'KNOCK', 'LEAVE', 'BOARD', 'END_LOOP', 'STAY',
+  'CUT_LOOSE', 'EXPOSE', 'RIOT',
+];
 const OFFER_BY_EVENT = { GAVE_CUATRO: cuatro, GAVE_MARACAS: maracas, GAVE_AREPA: arepa, GAVE_BOOK: book };
 function handleEvent(type, data = {}) {
   state.lastEvent = type;
@@ -672,6 +785,22 @@ function onAction(type) {
     if (obj) { showOffer(obj); offerTimer = 1.6; } // the object shows up on the table and glows
   }
   if (state.mode !== 'story' || state.people === 0) return;
+  if (state.nodeId === 'cityMap') {
+    const districtByEvent = {
+      GO_MARKET: 'market',
+      GO_DOCKS: 'docks',
+      GO_BARRIO: 'barrio',
+      GO_STATION: 'station',
+    };
+    const district = districtByEvent[type];
+    if (district && state._visited?.[district]) {
+      whisper('You already changed that district. Another road is waiting.');
+      return;
+    }
+  }
+  if (state.nodeId === 'finale') {
+    state._finalChoice = type === 'STAY' ? 'stay' : 'leave';
+  }
   const target = STORY[state.nodeId].expects?.[type];
   if (target) goTo(target);
 }
@@ -679,6 +808,11 @@ function onAction(type) {
 // Keyboard simulation (so you can play without a camera)
 addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
+  const choose = (...types) => {
+    const expects = STORY[state.nodeId]?.expects ?? {};
+    const type = types.find((candidate) => expects[candidate]);
+    if (type) handleEvent(type);
+  };
   if (k === 'p') handleEvent(state.people > 0 ? 'PERSON_LEFT' : 'PERSON_PRESENT');
   else if (k === '1') handleEvent('SURRENDER');
   else if (k === '2') handleEvent('FIGHT');
@@ -686,6 +820,20 @@ addEventListener('keydown', (e) => {
   else if (k === '4') handleEvent('GAVE_MARACAS');
   else if (k === '5') handleEvent('GAVE_AREPA');
   else if (k === '6') handleEvent('GAVE_BOOK');
+  else if (k === 'm') choose('GO_MARKET');
+  else if (k === 'd') choose('GO_DOCKS');
+  else if (k === 'b') choose('GO_BARRIO', 'BOARD');
+  else if (k === 's') choose('GO_STATION', 'STAY', 'SAVE');
+  else if (k === 'f') handleEvent('FIGHT');
+  else if (k === 'c') choose('CHASE');
+  else if (k === 'e') choose('HELP', 'RESCUE', 'ENTER', 'SAVE', 'STAY');
+  else if (k === 'x') choose('BREAK', 'END_LOOP');
+  else if (k === 'l') choose('CLIMB', 'LEAVE', 'LETTERS');
+  else if (k === 'o') choose('OPEN', 'ORGANIZE');
+  else if (k === 't') choose('STEAL');
+  else if (k === 'k') choose('KEEP', 'KNOCK');
+  else if (k === 'a') choose('RETURN');
+  else if (k === 'w') choose('BOARD');
   else if (k === '7') handleEvent('PEOPLE_COUNT', { count: state.people >= 2 ? 1 : 2 });
   else if (k === 'r') resetGame();
   else if (k === 'v') setVoice(!CONFIG.voiceOn);
@@ -708,7 +856,8 @@ function voiceActive() {
 
 function updateStory(dt) {
   const node = STORY[state.nodeId];
-  const len = node.text.length;
+  const text = nodeText(node);
+  const len = text.length;
 
   // Typing follows the voice when there is one, our own clock otherwise.
   if (state.voiceDone) state.typed = len;
@@ -723,7 +872,7 @@ function updateStory(dt) {
     state.typed += dt * CONFIG.typeSpeed;
   }
   state.typed = Math.min(state.typed, len);
-  el.text.textContent = node.text.slice(0, Math.floor(state.typed));
+  el.text.textContent = text.slice(0, Math.floor(state.typed));
   if (state.typed < len) return;
 
   if (state.people > 0) state.nodeTime += dt;   // the story waits for a visitor who walked away
@@ -754,6 +903,11 @@ function animate() {
   const t = clock.elapsedTime;
 
   if (state.mode === 'story') updateStory(dt);
+  updateCollapsedBuildings(dt);
+  updateMusic(dt);
+  sceneEventTimer = Math.max(0, sceneEventTimer - dt);
+  shakeTimer = Math.max(0, shakeTimer - dt);
+  riotLight.intensity = Math.max(0, riotLight.intensity - dt * 2.5);
 
   // NPC idle motion + reaction pulse
   reactTimer = Math.max(0, reactTimer - dt);
@@ -778,15 +932,20 @@ function animate() {
   }
 
   // slow camera sway
-  camera.position.x = Math.sin(t * 0.3) * 0.15;
+  const shake = shakeTimer > 0 ? shakeTimer * 0.08 : 0;
+  camera.position.x = Math.sin(t * 0.3) * 0.15 + (Math.random() - 0.5) * shake;
+  camera.position.y = 1.6 + (Math.random() - 0.5) * shake;
   camera.lookAt(0, 1.3, -3);
 
   el.hud.textContent =
     `mode: ${state.mode}   people: ${state.people}\n` +
     `node: ${state.nodeId ?? '-'}   last event: ${state.lastEvent}\n` +
+    `scene: ${sceneEvent}   reputation: ${state._reputation ?? 0}\n` +
     `path: ${state.path.join(' ') || '-'}\n\n` +
-    `P presence   1 surrender   2 fight\n` +
-    `3 cuatro   4 maracas   5 arepa   6 book   7 two people\n` +
+    `P presence   M market   D docks   B barrio   S station\n` +
+    `F fight   E interact/rescue   X break/end   L leave/climb\n` +
+    `O organize/open   C chase   K keep/knock   W board   A return\n` +
+    `1 surrender   2 fight   3-6 objects   7 two people\n` +
     `R reset    V voice     H hide`;
 
   renderer.render(scene, camera);
