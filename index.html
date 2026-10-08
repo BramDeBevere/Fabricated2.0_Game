@@ -18,45 +18,38 @@
   #stage, #stage canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
   #dialogue { position: fixed; left: 50%; bottom: 3vh; transform: translateX(-50%);
-    width: min(410px, 76vw); padding: 8px 11px 9px; background: rgba(20, 17, 15, .78);
-    border-left: 2px solid var(--gold); }
-  #npc-text { font-size: clamp(13px, 1.25vw, 16px); line-height: 1.22; min-height: 0;
-    max-height: 12vh; overflow: hidden; margin: 0; }
-  #hint { margin: 5px 0 0; font-size: 11px; color: var(--gold); font-style: italic; opacity: 0; transition: opacity .6s; }
+    width: min(780px, 92vw); padding: 22px 28px 24px; background: rgba(20, 17, 15, .82);
+    border-left: 6px solid var(--gold); }
+  #npc-text { font-size: clamp(20px, 2.6vw, 30px); line-height: 1.45; min-height: 3em;
+    margin: 0; }
+  #hint { margin: 12px 0 0; font-size: 16px; color: var(--gold); font-style: italic; opacity: 0; transition: opacity .6s; }
   #hint.show { opacity: 1; }
 
-  #whisper { position: fixed; top: 7vh; left: 50%; transform: translateX(-50%); max-width: 70vw;
-    padding: 5px 9px; background: rgba(20, 17, 15, .65); font-size: 14px; font-style: italic;
-    text-align: center; opacity: 0; transition: opacity .5s; text-shadow: 0 1px 4px #000; }
+  #whisper { position: fixed; top: 9vh; left: 50%; transform: translateX(-50%); font-size: 22px; font-style: italic;
+    opacity: 0; transition: opacity .5s; text-shadow: 0 2px 8px #000; }
   #whisper.show { opacity: 1; }
 
-  #path-box { position: fixed; top: 12vh; left: 50%; transform: translateX(-50%); max-width: 82vw;
-    text-align: center; opacity: 0; transition: opacity 1s; }
+  #path-box { position: fixed; top: 14vh; left: 50%; transform: translateX(-50%); text-align: center; opacity: 0; transition: opacity 1s; }
   #path-box.show { opacity: 1; }
-  #path-box p { margin: 0 0 4px; font-size: 12px; }
-  #path-line { font-size: clamp(17px, 2.4vw, 28px); letter-spacing: .04em; }
+  #path-box p { margin: 0 0 8px; font-size: 18px; }
+  #path-line { font-size: clamp(30px, 5vw, 56px); letter-spacing: .08em; }
 
   #idle { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
     background: var(--night); transition: opacity 1s; }
-  #idle h1 { font-size: clamp(25px, 4vw, 46px); font-weight: normal; margin: 0 0 7px; }
-  #idle p { margin: 0; font-size: 14px; opacity: .7; }
-  #idle .bar { height: 4px; width: 130px; margin: 0 auto 18px;
+  #idle h1 { font-size: clamp(34px, 6vw, 72px); font-weight: normal; margin: 0 0 12px; }
+  #idle p { margin: 0; font-size: 20px; opacity: .7; }
+  #idle .bar { height: 6px; width: 180px; margin: 0 auto 28px;
     background: linear-gradient(90deg, var(--gold) 50%, var(--blue) 50% 75%, var(--red) 75%); }
   .hidden { opacity: 0 !important; pointer-events: none; }
 
-  #hud { position: fixed; top: 7px; left: 7px; padding: 6px 8px; font: 10px/1.35 Consolas, monospace;
+  #hud { position: fixed; top: 10px; left: 10px; padding: 10px 14px; font: 13px/1.5 Consolas, monospace;
     background: rgba(0,0,0,.65); white-space: pre; }
 
-  #sound-btn { position: fixed; bottom: 9px; right: 9px; padding: 5px 8px; cursor: pointer;
+  #sound-btn { position: fixed; bottom: 14px; right: 14px; padding: 8px 14px; cursor: pointer;
     background: rgba(20,17,15,.7); border: 1px solid var(--gold); color: var(--paper);
-    font: 11px Consolas, monospace; letter-spacing: .03em; }
+    font: 14px Consolas, monospace; letter-spacing: .05em; }
   #sound-btn.off { border-color: #555; color: #888; }
   #sound-btn:hover { background: rgba(242,182,50,.18); }
-  @media (max-width: 600px) {
-    #dialogue { width: min(360px, 84vw); }
-    #npc-text { font-size: 13px; max-height: 14vh; }
-    #path-line { font-size: 16px; }
-  }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 <script type="importmap">

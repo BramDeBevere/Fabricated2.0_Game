@@ -11,6 +11,7 @@ const CONFIG = {
   absentWhisperSec: 10,  // NPC notices the visitor left
   absentResetSec: 60,    // go back to the idle screen
   endHoldSec: 20,        // how long the ending stays on screen
+  dialogueSentences: 3,  // maximum complete sentences shown in the dialogue box
   useCamera: false,      // set to true once the Python YOLO script runs
   cameraUrl: 'ws://localhost:8765',
 };
@@ -293,6 +294,10 @@ const muzzleMat = new THREE.MeshStandardMaterial({ color: 0xdcc9a8, roughness: 0
 const darkMat = new THREE.MeshStandardMaterial({ color: 0x43332a, roughness: 0.85 });
 const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const pupilMat = new THREE.MeshBasicMaterial({ color: 0x231a15 });
+const npcEyes = [];
+const npcPupils = [];
+const npcEars = [];
+const npcArms = [];
 
 const furPart = (geo, x, y, z, sx, sy, sz) => {
   const m = new THREE.Mesh(geo, npcMat);
@@ -301,76 +306,101 @@ const furPart = (geo, x, y, z, sx, sy, sz) => {
   return m;
 };
 
-// Body: chubby rounded torso with a big rounded hindquarter behind it
-npc.add(furPart(new THREE.SphereGeometry(1, 24, 20), 0, 0.72, 0, 0.5, 0.52, 0.55));
-npc.add(furPart(new THREE.SphereGeometry(1, 24, 20), 0, 0.78, -0.34, 0.42, 0.44, 0.42));
+// Body: upright pear-shaped torso with the heavy rounded hindquarter of a capybara.
+npc.add(furPart(new THREE.SphereGeometry(1, 24, 20), 0, 0.78, 0, 0.55, 0.7, 0.58));
+npc.add(furPart(new THREE.SphereGeometry(1, 24, 20), 0, 0.78, -0.38, 0.48, 0.55, 0.5));
+npc.add(furPart(new THREE.SphereGeometry(1, 20, 16), 0.28, 0.62, -0.36, 0.38, 0.45, 0.42));
 
-// Head: wide rounded block
-npc.add(furPart(new THREE.SphereGeometry(1, 28, 24), 0, 1.32, 0.14, 0.44, 0.4, 0.44));
+// Head and sloping neck: broad at the cheeks, tapering into a long muzzle.
+npc.add(furPart(new THREE.SphereGeometry(1, 28, 24), 0, 1.45, 0.14, 0.46, 0.48, 0.45));
+npc.add(furPart(new THREE.SphereGeometry(1, 24, 18), 0, 1.2, 0.27, 0.4, 0.48, 0.42));
 
-// Muzzle: the capybara's broad snout at the lower front, slightly lighter
+// Broad forward muzzle, with a dark rounded nose and cheek freckles.
 const muzzle = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 18), muzzleMat);
-muzzle.position.set(0, 1.04, 0.4);
-muzzle.scale.set(0.27, 0.17, 0.22);
+muzzle.position.set(0, 1.19, 0.47);
+muzzle.scale.set(0.31, 0.2, 0.3);
 npc.add(muzzle);
 
 // Nose: dark rounded cap on top of the muzzle
 const nose = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), darkMat);
-nose.position.set(0, 1.16, 0.5);
-nose.scale.set(0.16, 0.08, 0.1);
+nose.position.set(0, 1.3, 0.73);
+nose.scale.set(0.18, 0.11, 0.12);
 npc.add(nose);
 for (const nx of [-0.055, 0.055]) {
   const n = new THREE.Mesh(new THREE.SphereGeometry(0.017, 8, 8), darkMat);
-  n.position.set(nx, 1.2, 0.57);
+  n.position.set(nx, 1.32, 0.8);
   npc.add(n);
+}
+const freckleMat = new THREE.MeshBasicMaterial({ color: 0x987452 });
+for (let i = 0; i < 8; i++) {
+  const freckle = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), freckleMat);
+  freckle.position.set(-0.18 + (i % 4) * 0.12, 1.15 + Math.floor(i / 4) * 0.07, 0.72);
+  npc.add(freckle);
 }
 
 // Ears: two little rounded ears on top
 for (const ex of [-0.19, 0.19]) {
   const ear = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), npcMat);
-  ear.position.set(ex, 1.74, -0.02);
-  ear.scale.set(0.09, 0.11, 0.06);
+  ear.position.set(ex, 1.91, 0.02);
+  ear.scale.set(0.1, 0.15, 0.07);
   npc.add(ear);
+  npcEars.push(ear);
 }
 
 // Eyes: big, round and friendly, sitting above the muzzle (white + pupil + glint)
 for (const ex of [-0.17, 0.17]) {
   const white = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), whiteMat);
-  white.position.set(ex, 1.4, 0.42);
+  white.position.set(ex, 1.55, 0.47);
   white.scale.set(1, 1.2, 0.5);
   const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), pupilMat);
-  pupil.position.set(ex, 1.4, 0.49);
+  pupil.position.set(ex, 1.55, 0.54);
   const glint = new THREE.Mesh(new THREE.SphereGeometry(0.017, 8, 8), whiteMat);
-  glint.position.set(ex - 0.02, 1.44, 0.53);
+  glint.position.set(ex - 0.02, 1.6, 0.58);
   npc.add(white, pupil, glint);
+  npcEyes.push(white);
+  npcPupils.push(pupil);
 }
 
 // Smile: a gentle downward arc below the nose
 const smile = new THREE.Mesh(
-  new THREE.TorusGeometry(0.11, 0.015, 8, 20, Math.PI),
+  new THREE.TorusGeometry(0.12, 0.015, 8, 20, Math.PI),
   darkMat,
 );
-smile.position.set(0, 0.9, 0.52);
+smile.position.set(0, 1.02, 0.76);
 smile.rotation.z = Math.PI;
 npc.add(smile);
 
-// Arms: two little rounded arms hanging at its sides
+// Front legs: characteristic short upright legs with dark little claws.
 for (const ax of [-0.42, 0.42]) {
-  const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.3, 6, 12), npcMat);
-  arm.position.set(ax, 0.92, 0.12);
-  arm.rotation.z = ax < 0 ? 0.35 : -0.35;
-  npc.add(arm);
+  const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.42, 6, 12), npcMat);
+  leg.position.set(ax, 0.47, 0.28);
+  leg.rotation.z = ax < 0 ? 0.12 : -0.12;
+  npc.add(leg);
+  npcArms.push(leg);
+  for (let claw = -1; claw <= 1; claw++) {
+    const toe = new THREE.Mesh(new THREE.CapsuleGeometry(0.018, 0.1, 4, 6), darkMat);
+    toe.position.set(ax + claw * 0.045, 0.2, 0.39);
+    toe.rotation.x = Math.PI / 2;
+    npc.add(toe);
+  }
 }
 
-// Feet: two small paws at the front bottom
+// Hind feet sit under the large rear haunch.
 for (const fx of [-0.18, 0.18]) {
   const foot = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), darkMat);
-  foot.position.set(fx, 0.14, 0.28);
-  foot.scale.set(0.11, 0.08, 0.15);
+  foot.position.set(fx + 0.25, 0.16, -0.08);
+  foot.scale.set(0.16, 0.1, 0.23);
   npc.add(foot);
 }
 
 npc.position.set(0, 0, -0.8);
+const npcTail = new THREE.Mesh(
+  new THREE.CapsuleGeometry(0.06, 0.3, 5, 10),
+  npcMat,
+);
+npcTail.position.set(0.2, 0.58, -0.82);
+npcTail.rotation.x = Math.PI / 2;
+npc.add(npcTail);
 npc.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 scene.add(npc);
 
@@ -497,7 +527,14 @@ const REACT_COLORS = {
 };
 const black = new THREE.Color(0x000000);
 let reactColor = black, reactTimer = 0;
-function react(type) { reactColor = REACT_COLORS[type] ?? black; reactTimer = 1.2; }
+let avatarAction = 'idle';
+let avatarActionTimer = 0;
+function react(type) {
+  reactColor = REACT_COLORS[type] ?? black;
+  reactTimer = 1.2;
+  avatarAction = type;
+  avatarActionTimer = 1.8;
+}
 
 const riotLight = new THREE.PointLight(0xc4302b, 0, 18);
 riotLight.position.set(0, 4, -8);
@@ -615,6 +652,13 @@ function nodeText(node) {
   return typeof node.text === 'function' ? node.text(state) : node.text;
 }
 
+function visibleDialogue(text, characterCount) {
+  const typedText = text.slice(0, Math.floor(characterCount));
+  const sentences = typedText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [];
+  const limit = Math.max(1, Math.min(3, CONFIG.dialogueSentences));
+  return sentences.slice(0, limit).join('').trim();
+}
+
 function goTo(id) {
   const node = STORY[id];
   if (!node) return console.warn('Unknown node:', id);
@@ -622,7 +666,11 @@ function goTo(id) {
   state.typed = 0;
   state.nodeTime = 0;
   el.hint.classList.remove('show');
-  el.hint.textContent = node.hint ?? '';
+  el.hint.textContent = node.expects
+    ? (id === 'cityMap'
+      ? '(Move left, stay centered, or move right)'
+      : '(Fist, raise a hand, or wave)')
+    : (node.hint ?? '');
   if (node.sceneEvent) triggerSceneEvent(node.sceneEvent);
   if (node.tag) state.path.push(node.tag);
   if (node.end) {
@@ -744,12 +792,14 @@ function chime() { // soft two-note resolution for the ending
 }
 
 // ---------- Event system: the camera (or keyboard) talks to the game through this ----------
-// Events: PERSON_PRESENT, PERSON_LEFT, PEOPLE_COUNT {count},
-//         SURRENDER, FIGHT, GAVE_CUATRO, GAVE_MARACAS, GAVE_AREPA, GAVE_BOOK
-// The camera will later report which object it sees; each maps to a GAVE_* event.
+// Camera-facing events stay intentionally small: WAVE, HAND_UP, FIST, LEFT,
+// CENTER, RIGHT, plus PERSON_PRESENT/PERSON_LEFT. Keyboard-only test events
+// remain available below and are translated into the same gesture actions.
 const OBJECT_EVENTS = ['GAVE_CUATRO', 'GAVE_MARACAS', 'GAVE_AREPA', 'GAVE_BOOK'];
 const ACTIONS = [
   'SURRENDER', 'FIGHT', ...OBJECT_EVENTS,
+  'GESTURE_FIST', 'GESTURE_HAND_UP', 'GESTURE_WAVE',
+  'MOVE_LEFT', 'STAY_MIDDLE', 'MOVE_RIGHT',
   'GO_MARKET', 'GO_DOCKS', 'GO_BARRIO', 'GO_STATION',
   'CHASE', 'HELP', 'BREAK', 'CLIMB', 'RESCUE', 'CUT_LOOSE', 'STEAL',
   'SAVE', 'LETTERS', 'ORGANIZE', 'EXPOSE', 'RIOT', 'RETURN', 'KEEP',
@@ -757,12 +807,58 @@ const ACTIONS = [
   'CUT_LOOSE', 'EXPOSE', 'RIOT',
 ];
 const OFFER_BY_EVENT = { GAVE_CUATRO: cuatro, GAVE_MARACAS: maracas, GAVE_AREPA: arepa, GAVE_BOOK: book };
+
+const GESTURE_EVENTS = ['GESTURE_FIST', 'GESTURE_HAND_UP', 'GESTURE_WAVE',
+  'MOVE_LEFT', 'STAY_MIDDLE', 'MOVE_RIGHT'];
+const CAMERA_EVENT_ALIASES = {
+  FIST: 'GESTURE_FIST',
+  HAND_UP: 'GESTURE_HAND_UP',
+  WAVE: 'GESTURE_WAVE',
+  LEFT: 'MOVE_LEFT',
+  CENTER: 'STAY_MIDDLE',
+  RIGHT: 'MOVE_RIGHT',
+};
+
+function gestureTarget(type) {
+  const node = STORY[state.nodeId];
+  if (!node?.expects) return null;
+  const entries = Object.entries(node.expects);
+  if (state.nodeId === 'cityMap') {
+    const ordered = {
+      MOVE_LEFT: 0,
+      STAY_MIDDLE: 1,
+      MOVE_RIGHT: 2,
+    };
+    const index = ordered[type];
+    if (index === undefined) return null;
+    const selectedDistrict = state._districtPlan[index];
+    return node.expects[{
+      market: 'GO_MARKET',
+      docks: 'GO_DOCKS',
+      barrio: 'GO_BARRIO',
+      station: 'GO_STATION',
+    }[selectedDistrict]];
+  }
+
+  const preference = {
+    GESTURE_FIST: ['FIGHT', 'RIOT', 'BREAK', 'STEAL', 'CUT_LOOSE', 'OPEN'],
+    GESTURE_HAND_UP: ['HELP', 'RESCUE', 'SAVE', 'ORGANIZE', 'KEEP', 'STAY'],
+    GESTURE_WAVE: ['CHASE', 'EXPOSE', 'ENTER', 'KNOCK', 'LETTERS', 'LEAVE'],
+  }[type];
+  const preferred = preference?.find((event) => node.expects[event]);
+  if (preferred) return node.expects[preferred];
+
+  const directionalIndex = { MOVE_LEFT: 0, STAY_MIDDLE: 1, MOVE_RIGHT: 2 }[type];
+  return directionalIndex === undefined ? null : entries[directionalIndex % entries.length]?.[1];
+}
+
 function handleEvent(type, data = {}) {
-  state.lastEvent = type;
-  if (type === 'PERSON_PRESENT') setPeople(Math.max(1, state.people));
-  else if (type === 'PERSON_LEFT') setPeople(0);
-  else if (type === 'PEOPLE_COUNT') setPeople(data.count ?? 0);
-  else if (ACTIONS.includes(type)) onAction(type);
+  const event = CAMERA_EVENT_ALIASES[type] ?? type;
+  state.lastEvent = event;
+  if (event === 'PERSON_PRESENT') setPeople(Math.max(1, state.people));
+  else if (event === 'PERSON_LEFT') setPeople(0);
+  else if (event === 'PEOPLE_COUNT') setPeople(data.count ?? 0);
+  else if (ACTIONS.includes(event)) onAction(event);
 }
 
 function setPeople(n) {
@@ -799,9 +895,11 @@ function onAction(type) {
     }
   }
   if (state.nodeId === 'finale') {
-    state._finalChoice = type === 'STAY' ? 'stay' : 'leave';
+    state._finalChoice = type === 'STAY' || type === 'STAY_MIDDLE' ? 'stay' : 'leave';
   }
-  const target = STORY[state.nodeId].expects?.[type];
+  const target = GESTURE_EVENTS.includes(type)
+    ? gestureTarget(type)
+    : STORY[state.nodeId].expects?.[type];
   if (target) goTo(target);
 }
 
@@ -833,7 +931,12 @@ addEventListener('keydown', (e) => {
   else if (k === 't') choose('STEAL');
   else if (k === 'k') choose('KEEP', 'KNOCK');
   else if (k === 'a') choose('RETURN');
-  else if (k === 'w') choose('BOARD');
+  else if (k === 'q') handleEvent('GESTURE_FIST');
+  else if (k === 'u') handleEvent('GESTURE_HAND_UP');
+  else if (k === 'w') handleEvent('GESTURE_WAVE');
+  else if (k === 'arrowleft') handleEvent('MOVE_LEFT');
+  else if (k === 'arrowdown') handleEvent('STAY_MIDDLE');
+  else if (k === 'arrowright') handleEvent('MOVE_RIGHT');
   else if (k === '7') handleEvent('PEOPLE_COUNT', { count: state.people >= 2 ? 1 : 2 });
   else if (k === 'r') resetGame();
   else if (k === 'v') setVoice(!CONFIG.voiceOn);
@@ -843,7 +946,12 @@ addEventListener('keydown', (e) => {
 // Optional: receive events from the Python/YOLO script as JSON, e.g. {"event":"SURRENDER"}
 function connectCamera() {
   const ws = new WebSocket(CONFIG.cameraUrl);
-  ws.onmessage = (m) => { try { const d = JSON.parse(m.data); handleEvent(d.event, d); } catch { /* ignore */ } };
+  ws.onmessage = (m) => {
+    try {
+      const d = JSON.parse(m.data);
+      handleEvent(typeof d.event === 'string' ? d.event.toUpperCase() : d.event, d);
+    } catch { /* ignore */ }
+  };
   ws.onclose = () => setTimeout(connectCamera, 2000);
 }
 if (CONFIG.useCamera) connectCamera();
@@ -872,7 +980,7 @@ function updateStory(dt) {
     state.typed += dt * CONFIG.typeSpeed;
   }
   state.typed = Math.min(state.typed, len);
-  el.text.textContent = text.slice(0, Math.floor(state.typed));
+  el.text.textContent = visibleDialogue(text, state.typed);
   if (state.typed < len) return;
 
   if (state.people > 0) state.nodeTime += dt;   // the story waits for a visitor who walked away
@@ -911,11 +1019,38 @@ function animate() {
 
   // NPC idle motion + reaction pulse
   reactTimer = Math.max(0, reactTimer - dt);
+  avatarActionTimer = Math.max(0, avatarActionTimer - dt);
   const target = reactTimer > 0 ? reactColor : black;
   npcMat.emissive.lerp(target, 0.1);
-  npc.position.y = Math.sin(t * 1.6) * 0.02;
+  const actionAmount = Math.min(1, avatarActionTimer * 2);
+  const breath = Math.sin(t * 2.1) * 0.018;
+  const attention = avatarActionTimer > 0 ? actionAmount : 0;
+  npc.position.y = Math.sin(t * 1.6) * 0.02 + breath;
   npc.rotation.y = Math.sin(t * 0.5) * 0.15;
-  npc.scale.setScalar(1 + reactTimer * 0.04);
+  npc.rotation.z = Math.sin(t * 0.9) * 0.015
+    + (avatarAction === 'GESTURE_WAVE' ? Math.sin(t * 4) * 0.025 * attention : 0);
+  npc.scale.set(1 + reactTimer * 0.04, 1 + reactTimer * 0.04 + breath, 1 + reactTimer * 0.04);
+
+  // Small, readable reactions make the character feel aware without stealing focus.
+  const blinkCycle = t % 4.7;
+  const blink = blinkCycle > 4.48 ? 0.18 : 1;
+  const lookX = Math.sin(t * 0.7) * 0.018 + (state.people > 0 ? 0 : 0.035);
+  npcEyes.forEach((eye) => { eye.scale.y = 1.2 * blink; });
+  npcPupils.forEach((pupil, index) => {
+    pupil.position.x = (index ? 0.17 : -0.17) + lookX;
+    pupil.position.y = 1.55 + Math.sin(t * 0.8 + index) * 0.006;
+  });
+  npcEars.forEach((ear, index) => {
+    ear.rotation.z = Math.sin(t * 1.4 + index * Math.PI) * 0.08
+      + (avatarAction === 'GESTURE_WAVE' ? (index ? -0.25 : 0.25) * attention : 0);
+  });
+  npcArms.forEach((arm, index) => {
+    const rest = index ? -0.35 : 0.35;
+    const wave = avatarAction === 'GESTURE_WAVE' && index === 1 ? Math.sin(t * 10) * 0.35 * attention : 0;
+    const greeting = avatarAction === 'GESTURE_HAND_UP' ? (index ? -0.9 : 0.9) * attention : 0;
+    arm.rotation.z = rest + wave + greeting;
+  });
+  npcTail.rotation.z = Math.sin(t * 2.5) * 0.16 + (state.people > 0 ? Math.sin(t * 5) * 0.08 : 0);
 
   // the offered object glows, then fades
   offerTimer = Math.max(0, offerTimer - dt);
@@ -942,11 +1077,11 @@ function animate() {
     `node: ${state.nodeId ?? '-'}   last event: ${state.lastEvent}\n` +
     `scene: ${sceneEvent}   reputation: ${state._reputation ?? 0}\n` +
     `path: ${state.path.join(' ') || '-'}\n\n` +
-    `P presence   M market   D docks   B barrio   S station\n` +
-    `F fight   E interact/rescue   X break/end   L leave/climb\n` +
-    `O organize/open   C chase   K keep/knock   W board   A return\n` +
-    `1 surrender   2 fight   3-6 objects   7 two people\n` +
-    `R reset    V voice     H hide`;
+    `Test gestures: Q fist   U raised hand   W wave\n` +
+    `Position: Left / Down(center) / Right arrows\n` +
+    `P presence   R reset   V voice   H hide\n` +
+    `Legacy test shortcuts remain available\n` +
+    ``;
 
   renderer.render(scene, camera);
 }
