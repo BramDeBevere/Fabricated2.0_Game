@@ -45,7 +45,7 @@ function finalNode(state) {
 
 export const STORY = {
   start: {
-    text: 'The plaza is alive. The capybara keeper hands you a city map: "Choose a place, and help someone." You will live with the result.',
+    text: 'The plaza is alive. The capybara keeper gives you a city map: "Choose a place. Help someone. Live with the result."',
     delay: 4, next: 'cityMap', tag: '🌅 arrival',
   },
 
@@ -58,7 +58,7 @@ export const STORY = {
         barrio: 'hill barrio',
         station: 'old station',
       }[district]));
-      return `${left} place${left === 1 ? '' : 's'} remain — Left: ${choices[0]}, Center: ${choices[1]}, Right: ${choices[2]}. Where do you go?`;
+      return `${left} place${left === 1 ? '' : 's'} remain. Left: ${choices[0]}. Center: ${choices[1]}. Right: ${choices[2]}. Where do you go?`;
     },
     expects: {
       GO_MARKET: 'market_intro',
@@ -95,7 +95,7 @@ export const STORY = {
     tag: '🥭 truth behind the chase',
   },
   market_help: {
-    text: 'You help Luz search, and Tomas is hiding under a flour table. The medicine is gone, but the siblings are safe. Someone gives you a brass key.',
+    text: 'You help Luz search. Tomas is hiding under a flour table. The medicine is gone, but the siblings are safe. Someone gives you a brass key.',
     delay: 4, next: (state) => { state._marketSaved = true; state._brassKey = true; return finishDistrict(state, 'market'); },
     tag: '⭐ siblings reunited',
   },
@@ -107,7 +107,7 @@ export const STORY = {
     sceneEvent: 'FIGHT_START',
   },
   market_fight_result: {
-    text: 'The market erupts. Stalls fall, and people shout. Your fight begins now.',
+    text: 'The market erupts. Stalls fall. People shout. Your fight begins.',
     delay: 1,
     next: (state) => fightOutcome(state, Math.random() < 0.5, 'market_win', 'market_loss'),
     tag: '🥊 market fight',
@@ -148,12 +148,12 @@ export const STORY = {
     sceneEvent: 'DOCKS_COLLAPSE', tag: '✉️ letters saved',
   },
   docks_cut: {
-    text: 'You cut the boat loose, and the fire drifts away from the fuel. Yara lives, but every letter is lost. The harbor master gives you a radio.',
+    text: 'You cut the boat loose. The fire drifts away from the fuel. Yara lives, but every letter is lost. The harbor master gives you a radio.',
     delay: 4, next: (state) => { state._radio = true; return finishDistrict(state, 'docks'); },
     sceneEvent: 'DOCKS_EXPLOSION', tag: '🚤 fire at sea',
   },
   docks_steal: {
-    text: 'You steal the letter crate, but every page is blank. The real letters were with Yara. She says nothing.',
+    text: 'You steal the letter crate. Every page is blank. The real letters were with Yara. She says nothing.',
     delay: 4, next: (state) => { state._missing = true; return finishDistrict(state, 'docks'); },
     tag: '📭 empty letters',
   },
@@ -182,7 +182,7 @@ export const STORY = {
     tag: '🚪 many lives',
   },
   barrio_expose: {
-    text: 'You expose the rumor, and the tanks are clean. Then a real siren sounds. The danger is real.',
+    text: 'You expose the rumor. The tanks are clean. Then a real siren sounds. The danger is real.',
     delay: 3, next: 'barrio_riot', sceneEvent: 'RIOT_START', tag: '📣 rumor broken',
   },
   barrio_riot: {
@@ -222,7 +222,7 @@ export const STORY = {
     sceneEvent: 'TRAIN_DEPART', tag: '🪨 impossible train',
   },
   station_end: {
-    text: 'You tear down the photographs, and the radio stops. The station becomes an ordinary ruin. One note remains: some loops are lifeboats.',
+    text: 'You tear down the photographs. The radio stops. The station becomes an ordinary ruin. A note says: "Some loops are lifeboats."',
     delay: 4, next: (state) => { state._loopEnded = true; return finishDistrict(state, 'station'); },
     tag: '🕯️ loop ended',
   },
@@ -275,7 +275,7 @@ export const STORY = {
     delay: 3, end: true, tag: '⬜ missing',
   },
   end_open: {
-    text: 'The keeper folds your map. "Come back," he says. Every road is lit differently — no visit is the same.',
+    text: 'The keeper folds your map. "Come back," he says. Every road is lit differently. No visit is the same.',
     delay: 3, end: true, tag: '🌙 open road',
   },
   end_return: {
